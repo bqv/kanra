@@ -68,7 +68,7 @@ bool irc_handshake(struct IrcServer *this)
             }
 
             char *msgstr = irc_mtos(imsg);
-           wlogf(INFO, "Got:\n%s\n", msgstr);
+            wlogf(INFO, "Got:\n%s\n", msgstr);
 
             imsgs->head = imsg->next;
             free(imsg);
