@@ -6,6 +6,8 @@
 #define MAX_IRC 512
 #define MAX_PARAMS 14
 
+struct IrcServer;
+
 struct IrcMessage
 {
     char _raw[MAX_IRC+1];
@@ -43,7 +45,7 @@ struct IrcServer
 
 struct IrcServer* new_server(struct Config *conf);
 void irc_connect(struct IrcServer *server);
-void irc_handshake(struct IrcServer *server);
+bool irc_handshake(struct IrcServer *server);
 
 void irc_write(struct IrcServer *this, struct IrcMessage *message);
 struct MessageQueue* irc_read(struct IrcServer *this);

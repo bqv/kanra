@@ -90,15 +90,16 @@ struct Conn* init_rawconn(char *hostname, uint16_t port)
     return conn;
 }
 
-void raw_send(struct Conn *this, char *bytes)
+bool raw_send(struct Conn *this, char *bytes)
 {
     int sz = strlen(bytes);
 
     wlogf(NETDEBUG, "Sending %d bytes: %s\n", sz, bytes);
-    send(this->sock, bytes, sz, 0);
-};
+    sz = send(this->sock, bytes, sz, 0);
+    return sz < 0 ? false : true;
+}
 
-void raw_recv(struct Conn *this)
+bool raw_recv(struct Conn *this)
 {
     int sz, ret;
     char *bufptr = this->buffer + this->bcur;
@@ -108,16 +109,19 @@ void raw_recv(struct Conn *this)
         ret = poll(this->pfd, 1, 500);
         if (ret == -1) wlogf(NETERROR, "Poll error: %s\n", strerror(errno));
         if (ret <= 0) break;
+        else if (this->pfd->revents & (POLLERR | POLLHUP | POLLNVAL)) return false;
         else if (this->pfd->revents & POLLIN)
         {
-            sz = recv(this->sock, bufptr, 4096 - (bufptr - this->buffer), 0);
+            sz = recv(this->sock, bufptr, MAXBUF - this->bcur, 0);
+            if (sz < 0) return false;
             wlogf(NETTRACE, "Recieved %d bytes (@%d): %s\n", sz, this->bcur, bufptr);
             bufptr += sz;
             this->bcur += sz;
         }
     } while (sz > 0);
     wlogf(NETDEBUG, "Read %d bytes: %s\n", this->bcur, this->buffer);
-};
+    return true;
+}
 
 struct Conn* init_sslconn(char *hostname, uint16_t port)
 {
@@ -127,14 +131,16 @@ struct Conn* init_sslconn(char *hostname, uint16_t port)
     conn->send = ssl_send;
     conn->recv = ssl_recv;
     return conn;
-};
+}
 
-void ssl_send(struct Conn *this, char *bytes)
+bool ssl_send(struct Conn *this, char *bytes)
 {
     wlogf(CATASTROPHE, "ssl_send: Not implemented\n");
-};
+    return false;
+}
 
-void ssl_recv(struct Conn *this)
+bool ssl_recv(struct Conn *this)
 {
     wlogf(CATASTROPHE, "ssl_recv: Not implemented\n");
-};
+    return false;
+}

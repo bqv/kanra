@@ -1,6 +1,7 @@
 
 CC=gcc
-CFLAGS=-std=c11 -D_GNU_SOURCE -pthread -Wall -O0
+CFLAGS=-std=c11 -D_GNU_SOURCE -pthread -Wall -Wextra -Wpedantic -Werror -O0 \
+        -Wno-error=pedantic -Wno-error=unused-parameter
 LDFLAGS=-ggdb
 LIBRARIES=
 SOURCES= \
