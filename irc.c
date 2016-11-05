@@ -46,7 +46,7 @@ void irc_handshake(struct IrcServer *this)
         struct IrcMessage *imsg;
         for (imsg = imsgs->head; imsg != NULL; imsg = imsg->next)
         {
-            if (strcmp(imsg->command, "PING"))
+            if (!strcmp(imsg->command, "PING"))
             {
                 struct IrcMessage reply = {0};
                 reply.command = "PONG";
@@ -54,7 +54,7 @@ void irc_handshake(struct IrcServer *this)
 
                 this->write(this, &reply);
             }
-            else if (strcmp(imsg->command, "001"))
+            else if (!strcmp(imsg->command, "001"))
             {
                 registered = true;
             }
@@ -187,6 +187,14 @@ struct IrcMessage *irc_stom(char *str, const size_t size)
             imsg->params[n++] = ptr;
         } while ((ptr = memchr(ptr, ' ', rlen)) != NULL);
     }
+    if (imsg->trailing != NULL)
+    {
+        ptr = memchr(ptr, '\r', end-ptr);
+        if (*(ptr+1) == '\n')
+        {
+            *ptr = *(ptr+1) = '\0';
+        }
+    }
     
     return imsg;
 }
@@ -217,9 +225,9 @@ char *irc_mtos(struct IrcMessage *imsg)
             if (ptr < end) *ptr++ = '@';
             if (ptr < end) ptr = memccpy(ptr, imsg->host, '\0', end-ptr) - 1;
         }
+        if (ptr < end) *ptr++ = ' ';
     }
 
-    if (ptr < end) *ptr++ = ' ';
     if (imsg->command == NULL) return "\r\n";
     else if (ptr < end) ptr = memccpy(ptr, imsg->command, '\0', end-ptr) - 1;
 
