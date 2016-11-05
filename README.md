@@ -1,2 +1,2 @@
 # kanra
-Half a modular C IRC bot
+An Object Oriented C IRC bot
