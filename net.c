@@ -14,7 +14,7 @@ struct Conn* init_rawconn(char *hostname, uint16_t port)
     int ec;
     struct addrinfo hints;
 
-    struct Conn *conn = malloc(sizeof(struct Conn));
+    struct Conn *conn = calloc(1, sizeof(struct Conn));
     assert(conn != NULL);
 
     conn->bcur = 0;
@@ -82,7 +82,7 @@ struct Conn* init_rawconn(char *hostname, uint16_t port)
         return NULL;
     }
 
-    conn->pfd = malloc(sizeof(struct pollfd));
+    conn->pfd = calloc(1, sizeof(struct pollfd));
     conn->pfd->fd = conn->sock;
     conn->pfd->events = POLLIN | POLLPRI;
     conn->pfd->revents = 0;
@@ -94,7 +94,7 @@ void raw_send(struct Conn *this, char *bytes)
 {
     int sz = strlen(bytes);
 
-    wlogf(NETDEBUG, "Sending %d bytes: %s", sz, bytes);
+    wlogf(NETDEBUG, "Sending %d bytes: %s\n", sz, bytes);
     send(this->sock, bytes, sz, 0);
 };
 
@@ -111,12 +111,12 @@ void raw_recv(struct Conn *this)
         else if (this->pfd->revents & POLLIN)
         {
             sz = recv(this->sock, bufptr, 4096 - (bufptr - this->buffer), 0);
-            wlogf(NETTRACE, "Recieved %d bytes (@%d): %s", sz, this->bcur, bufptr);
+            wlogf(NETTRACE, "Recieved %d bytes (@%d): %s\n", sz, this->bcur, bufptr);
             bufptr += sz;
             this->bcur += sz;
         }
     } while (sz > 0);
-    wlogf(NETDEBUG, "Read %d bytes: %s", this->bcur, this->buffer);
+    wlogf(NETDEBUG, "Read %d bytes: %s\n", this->bcur, this->buffer);
 };
 
 struct Conn* init_sslconn(char *hostname, uint16_t port)

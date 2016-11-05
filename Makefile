@@ -1,6 +1,6 @@
 
 CC=gcc
-CFLAGS=-std=c11 -D_GNU_SOURCE -pthread -Wall -O3
+CFLAGS=-std=c11 -D_GNU_SOURCE -pthread -Wall -O0
 LDFLAGS=-ggdb
 LIBRARIES=
 SOURCES= \

@@ -3,7 +3,7 @@
 
 struct MessageQueue* new_msgqueue()
 {
-    struct MessageQueue *mq = malloc(sizeof(struct MessageQueue));
+    struct MessageQueue *mq = calloc(1, sizeof(struct MessageQueue));
     mq->head = mq->last = NULL;
     mq->len = 0;
     mq->push = mq_push;

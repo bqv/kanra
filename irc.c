@@ -7,7 +7,7 @@
 
 struct IrcServer* new_server(struct Config *conf)
 {
-    struct IrcServer *server = malloc(sizeof(struct IrcServer));
+    struct IrcServer *server = calloc(1, sizeof(struct IrcServer));
 
     server->conf = conf;
 
@@ -34,49 +34,84 @@ void irc_connect(struct IrcServer *server)
 
 void irc_handshake(struct IrcServer *this)
 {
+    bool registered = false;
+
     this->conn->send(this->conn, "NICK kanra\r\n");
     this->conn->send(this->conn, "USER kanra * * me\r\n");
-    struct IrcMessage *imsg = this->read(this);
-    wlogf(INFO, "==Got:\n%s==", irc_mtos(imsg));
+
+    while (!registered)
+    {
+        struct MessageQueue *imsgs = this->read(this);
+
+        struct IrcMessage *imsg;
+        for (imsg = imsgs->head; imsg != NULL; imsg = imsg->next)
+        {
+            if (strcmp(imsg->command, "PING"))
+            {
+                struct IrcMessage reply = {0};
+                reply.command = "PONG";
+                reply.trailing = imsg->trailing;
+
+                this->write(this, &reply);
+            }
+            else if (strcmp(imsg->command, "001"))
+            {
+                registered = true;
+            }
+
+            char *msgstr = irc_mtos(imsg);
+            wlogf(INFO, "Got:\n%s\n", msgstr);
+
+            free(imsg);
+            free(msgstr);
+        }
+    }
 }
 
 void irc_write(struct IrcServer *this, struct IrcMessage *message)
 {
     struct Conn *conn = this->conn;
-    conn->send(conn, irc_mtos(message));
+    char *line = irc_mtos(message);
+    conn->send(conn, line);
+    free(line);
 }
 
-struct IrcMessage* irc_read(struct IrcServer *this)
+struct MessageQueue *irc_read(struct IrcServer *this)
 {
-    struct IrcMessage *imsg;
     struct MessageQueue *mq = new_msgqueue();
-    struct Conn *conn = this->conn;
+    struct IrcMessage *imsg;
+    char *line, *end;
 
-    conn->recv(conn);
-    while ((imsg = irc_stom(conn->buffer)))
+    this->conn->recv(this->conn);
+    line = calloc(MAX_IRC+1, sizeof(char));
+
+    while ((end = memccpy(line, this->conn->buffer, '\n', MAX_IRC)) != NULL)
     {
+        *end = '\0';
+
+        imsg = irc_stom(line, end-line);
+
         if (imsg != NULL)
         {
             this->conn->bcur -= imsg->len;
-            memmove(this->conn->buffer, this->conn->buffer+imsg->len, this->conn->bcur);
+            memmove(this->conn->buffer, this->conn->buffer+imsg->len, sizeof(this->conn->buffer)-this->conn->bcur);
         }
         mq->push(mq, imsg);
     }
-    return imsg;
+    free(line);
+    return mq;
 }
 
-struct IrcMessage* irc_stom(char *str)
+struct IrcMessage *irc_stom(char *str, const size_t size)
 {
     char *ptr, *end;
 
-    struct IrcMessage *imsg = malloc(sizeof(struct IrcMessage));
+    struct IrcMessage *imsg = calloc(1, sizeof(struct IrcMessage));
+    memccpy(imsg->_raw, str, '\0', size);
+    imsg->len = size;
 
-    end = memccpy(imsg->_raw, str, '\n', MAX_IRC);
-    if (end == NULL) return NULL;
-
-    *end = '\0';
     ptr = imsg->_raw;
-    imsg->len = end - ptr;
+    end = ptr+imsg->len;
     if (*ptr == ':')
     {
         ptr++; // ':'
@@ -156,45 +191,52 @@ struct IrcMessage* irc_stom(char *str)
     return imsg;
 }
 
-char* irc_mtos(struct IrcMessage *imsg)
+char *irc_mtos(struct IrcMessage *imsg)
 {
     int i;
-    char *ret, *ptr, *end;
+    char *ret, *ptr;
 
+    // Null filter
     if (imsg == NULL) return "\r\n";
 
-    ret = ptr = malloc(sizeof(char[MAX_IRC+1]));
-    end = ptr + (MAX_IRC-2);
+    // Allocate message, mark end
+    ret = ptr = calloc(MAX_IRC+1, sizeof(char));
+    const char *end = ptr + (MAX_IRC-2);
+
     if (imsg->nickname != NULL)
     {
         if (ptr < end) *ptr++ = ':';
-        ptr = memccpy(ptr, imsg->nickname, '\0', end-ptr) - 1;
+        if (ptr < end) ptr = memccpy(ptr, imsg->nickname, '\0', end-ptr) - 1;
         if (imsg->host != NULL)
         {
             if (imsg->user != NULL)
             {
                 if (ptr < end) *ptr++ = '!';
-                ptr = memccpy(ptr, imsg->user, '\0', end-ptr) - 1;
+                if (ptr < end) ptr = memccpy(ptr, imsg->user, '\0', end-ptr) - 1;
             }
             if (ptr < end) *ptr++ = '@';
-            ptr = memccpy(ptr, imsg->host, '\0', end-ptr) - 1;
+            if (ptr < end) ptr = memccpy(ptr, imsg->host, '\0', end-ptr) - 1;
         }
     }
+
     if (ptr < end) *ptr++ = ' ';
-    ptr = memccpy(ptr, imsg->command, '\0', end-ptr) - 1;
+    if (imsg->command == NULL) return "\r\n";
+    else if (ptr < end) ptr = memccpy(ptr, imsg->command, '\0', end-ptr) - 1;
+
     for (i = 0; i <= MAX_PARAMS-1; i++)
     {
         if (imsg->params[i] == NULL) break;
         if (ptr < end) *ptr++ = ' ';
-        ptr = memccpy(ptr, imsg->params[i], '\0', end-ptr) - 1;
+        if (ptr < end) ptr = memccpy(ptr, imsg->params[i], '\0', end-ptr) - 1;
     }
+
     if (imsg->trailing != NULL)
     {
         if (ptr < end) *ptr++ = ' ';
         if (ptr < end) *ptr++ = ':';
-        ptr = memccpy(ptr, imsg->trailing, '\0', end-ptr) - 1;
+        if (ptr < end) ptr = memccpy(ptr, imsg->trailing, '\0', end-ptr) - 1;
     }
-    memcpy(ptr, "\r\n", 3);
+    if (ptr < end) memcpy(ptr, "\r\n", 3);
     return ret;
 }
 

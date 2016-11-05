@@ -8,7 +8,7 @@ struct Config* parse_args(int argc, char *argv[])
 {
     long port;
 
-    struct Config *conf = malloc(sizeof(struct Config));
+    struct Config *conf = calloc(1, sizeof(struct Config));
     assert(conf != NULL);
 
     wlogf(CFGDEBUG, "Found %d arguments...\n", argc-1);

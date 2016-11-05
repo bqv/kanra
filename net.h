@@ -8,9 +8,13 @@
 
 #define MAXBUF 4096
 
+typedef void (*send_fn_t)(struct Conn *this, char *bytes);
+typedef void (*recv_fn_t)(struct Conn *this);
+
 struct Conn
 {
-    int sock, bcur;
+    int sock;
+    size_t bcur;
     char buffer[MAXBUF];
     char *hostname;
     uint16_t port;
@@ -19,8 +23,8 @@ struct Conn
     struct addrinfo *ai;
     struct pollfd *pfd;
 
-    void (*send)(struct Conn *this, char *bytes);
-    void (*recv)(struct Conn *this);
+    send_fn_t send;
+    recv_fn_t recv;
 };
 
 struct Conn* init_rawconn(char *hostname, uint16_t port);
