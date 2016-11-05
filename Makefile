@@ -32,7 +32,7 @@ rmr:
 
 vg:
 		$(MAKE) clean all
-		valgrind ./$(EXECUTABLE) irc.sublumin.al 6667
+		valgrind --leak-check=full -v ./$(EXECUTABLE) irc.sublumin.al 6667
 
 dbg:
 		$(MAKE) clean all

@@ -12,6 +12,7 @@ struct Conn;
 
 typedef bool (*send_fn_t)(struct Conn *this, char *bytes);
 typedef bool (*recv_fn_t)(struct Conn *this);
+typedef void (*close_fn_t)(struct Conn *this);
 
 struct Conn
 {
@@ -27,13 +28,17 @@ struct Conn
 
     send_fn_t send;
     recv_fn_t recv;
+
+    close_fn_t close;
 };
 
 struct Conn* init_rawconn(char *hostname, uint16_t port);
 bool raw_send(struct Conn *this, char *bytes);
 bool raw_recv(struct Conn *this);
+void raw_close(struct Conn *this);
 struct Conn* init_sslconn(char *hostname, uint16_t port);
 bool ssl_send(struct Conn *this, char *bytes);
 bool ssl_recv(struct Conn *this);
+void ssl_close(struct Conn *this);
 
 #endif /*NET_H*/

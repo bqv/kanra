@@ -23,6 +23,7 @@ struct Conn* init_rawconn(char *hostname, uint16_t port)
     conn->ssl = false;
     conn->send = raw_send;
     conn->recv = raw_recv;
+    conn->close = raw_close;
     memset(&hints, 0, sizeof(struct addrinfo));
     {
         hints.ai_family = AF_UNSPEC;
@@ -87,6 +88,8 @@ struct Conn* init_rawconn(char *hostname, uint16_t port)
     conn->pfd->events = POLLIN | POLLPRI;
     conn->pfd->revents = 0;
 
+    freeaddrinfo(conn->ai);
+
     return conn;
 }
 
@@ -123,6 +126,11 @@ bool raw_recv(struct Conn *this)
     return true;
 }
 
+void raw_close(struct Conn *this)
+{
+    free(this->pfd);
+}
+
 struct Conn* init_sslconn(char *hostname, uint16_t port)
 {
     struct Conn *conn = init_rawconn(hostname, port);
@@ -130,6 +138,7 @@ struct Conn* init_sslconn(char *hostname, uint16_t port)
     conn->ssl = true;
     conn->send = ssl_send;
     conn->recv = ssl_recv;
+    conn->close = ssl_close;
     return conn;
 }
 
@@ -143,4 +152,9 @@ bool ssl_recv(struct Conn *this)
 {
     wlogf(CATASTROPHE, "ssl_recv: Not implemented\n");
     return false;
+}
+
+void ssl_close(struct Conn *this)
+{
+    wlogf(CATASTROPHE, "ssl_close: Not implemented\n");
 }

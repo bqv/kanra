@@ -29,6 +29,7 @@ struct IrcMessage
 };
 
 typedef void (*connect_fn_t)(struct IrcServer *this);
+typedef void (*disconnect_fn_t)(struct IrcServer *this);
 typedef void (*write_fn_t)(struct IrcServer *this, struct IrcMessage *);
 typedef struct MessageQueue* (*read_fn_t)(struct IrcServer *this);
 
@@ -38,6 +39,7 @@ struct IrcServer
     struct Conn *conn;
 
     connect_fn_t connect;
+    disconnect_fn_t disconnect;
 
     write_fn_t write;
     read_fn_t read;
@@ -46,6 +48,7 @@ struct IrcServer
 struct IrcServer* new_server(struct Config *conf);
 void irc_connect(struct IrcServer *server);
 bool irc_handshake(struct IrcServer *server);
+void irc_disconnect(struct IrcServer *server);
 
 void irc_write(struct IrcServer *this, struct IrcMessage *message);
 struct MessageQueue* irc_read(struct IrcServer *this);

@@ -12,6 +12,7 @@ struct IrcServer* new_server(struct Config *conf)
     server->conf = conf;
 
     server->connect = irc_connect;
+    server->disconnect = irc_disconnect;
     server->read = irc_read;
     server->write = irc_write;
     return server;
@@ -30,7 +31,12 @@ void irc_connect(struct IrcServer *server)
     }
 
     irc_handshake(server);
-    __asm__("int3");
+}
+
+void irc_disconnect(struct IrcServer *server)
+{
+    server->conn->close(server->conn);
+    free(server->conn);
 }
 
 bool irc_handshake(struct IrcServer *this)
@@ -43,7 +49,7 @@ bool irc_handshake(struct IrcServer *this)
 
     while ((imsgs = this->read(this)) != NULL)
     {
-        for (imsg = imsgs->head; imsg != NULL; imsg = imsg->next)
+        while ((imsg = imsgs->pop(imsgs)) != NULL)
         {
             if (!strcmp(imsg->command, "PING"))
             {
@@ -55,12 +61,16 @@ bool irc_handshake(struct IrcServer *this)
             }
             else if (!strcmp(imsg->command, "001"))
             {
+                free(imsg);
+                while ((imsg = imsgs->pop(imsgs)) != NULL) free(imsg);
+                free(imsgs);
                 return true;
             }
 
             char *msgstr = irc_mtos(imsg);
-            wlogf(INFO, "Got:\n%s\n", msgstr);
+           wlogf(INFO, "Got:\n%s\n", msgstr);
 
+            imsgs->head = imsg->next;
             free(imsg);
             free(msgstr);
         }

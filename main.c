@@ -23,6 +23,10 @@ int main(int argc, char *argv[])
         server->connect(server);
 
         wlogf(INFO, "Finishing\n");
+
+        server->disconnect(server);
+        free(server);
+        free(conf);
     }
 
     return EXIT_SUCCESS;
